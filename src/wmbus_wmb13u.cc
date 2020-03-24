@@ -114,20 +114,19 @@ bool WMBusWMB13U::ping()
 
 uint32_t WMBusWMB13U::getDeviceId()
 {
-    return 0x11111111;
-    /*getConfiguration();
+    getConfiguration();
     uchar a = config_[0x22];
     uchar b = config_[0x23];
     uchar c = config_[0x24];
     uchar d = config_[0x25];
-    return a << 24 | b << 16 | c << 8 | d;*/
+    return a << 24 | b << 16 | c << 8 | d;
 }
 
 LinkModeSet WMBusWMB13U::getLinkModes()
 {
     if (serial_->readonly()) { return Any_bit; }  // Feeding from stdin or file.
 
-    // getConfiguration();
+    getConfiguration();
     return link_modes_;
 }
 
@@ -141,7 +140,6 @@ void WMBusWMB13U::setLinkModes(LinkModeSet lms)
         error("(wmb13u) setting link mode(s) %s is not supported for wmb13u\n", modes.c_str());
     }
 
-    /*
     if (!enterConfigMode()) return;
 
     vector<uchar> atg(4);
@@ -166,10 +164,10 @@ void WMBusWMB13U::setLinkModes(LinkModeSet lms)
 
     verbose("(wmb13u) set link mode %02x\n", atg[3]);
     serial_->send(atg);
-    */
+
     link_modes_ = lms;
 
-//    exitConfigMode();
+    exitConfigMode();
 }
 
 void WMBusWMB13U::simulate()
@@ -338,7 +336,7 @@ bool detectWMB13U(string device, SerialCommunicationManager *manager)
     wakeup[0] = 0xff;
 
     serial->send(wakeup);
-    usleep(1000*100);
+    usleep(1000*200);
     serial->receive(&data);
 
     if (!startsWith("OK", data)) return false;
@@ -349,12 +347,22 @@ bool detectWMB13U(string device, SerialCommunicationManager *manager)
     at[1] = 'T';
 
     serial->send(at);
-    usleep(1000*100);
+    usleep(1000*200);
     serial->receive(&data);
 
     if (!startsWith("OK", data)) return false;
 
-    return true;
+    // send AT to enter configuration mode.
+    vector<uchar> atq(3);
+    atq[0] = 'A';
+    atq[1] = 'T';
+    atq[2] = 'Q';
+
+    serial->send(atq);
+    usleep(1000*200);
+    serial->receive(&data);
+
+    if (!startsWith("OK", data)) return false;
 
     serial->close();
     return ok;
